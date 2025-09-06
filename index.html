@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meme Battle Hub 🎯</title>
+<style>
+  body { font-family: Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 0; }
+  header { background: #4b6cb7; color: white; text-align: center; padding: 1rem; }
+  h1 { margin: 0; }
+  .container { max-width: 900px; margin: 20px auto; padding: 10px; }
+  input[type="file"] { margin: 10px 0; }
+  button { padding: 10px 15px; margin: 5px; cursor: pointer; background: #36d1dc; border: none; color: white; border-radius: 5px; }
+  .gallery { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; }
+  .meme-card { background: white; padding: 10px; border-radius: 10px; width: 200px; box-shadow: 0 0 5px rgba(0,0,0,0.2); text-align: center; }
+  .meme-card img { max-width: 100%; border-radius: 10px; }
+  .dare-wheel { margin-top: 40px; text-align: center; }
+  .leaderboard { margin-top: 40px; background: white; padding: 15px; border-radius: 10px; box-shadow: 0 0 5px rgba(0,0,0,0.2); }
+  .leaderboard h2 { margin-top: 0; }
+  li { margin: 5px 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Meme Battle Hub 🎯</h1>
+</header>
+
+<div class="container">
+
+  <!-- Meme Upload -->
+  <h2>Upload Your Meme 🖼️</h2>
+  <input type="file" id="memeUpload" />
+  <button onclick="uploadMeme()">Upload Meme</button>
+
+  <!-- Meme Gallery -->
+  <h2>Meme Gallery 😎</h2>
+  <div class="gallery" id="gallery"></div>
+
+  <!-- Dare Wheel -->
+  <div class="dare-wheel">
+    <h2>Dare Wheel 🎡</h2>
+    <button onclick="spinDare()">Spin the Wheel</button>
+    <p id="dareText" style="margin-top: 10px; font-size: 18px; font-weight: bold;"></p>
+  </div>
+
+  <!-- Leaderboard -->
+  <div class="leaderboard">
+    <h2>Leaderboard 🏆</h2>
+    <ul id="leaderboardList"></ul>
+  </div>
+
+</div>
+
+<script>
+  // Mock data storage (replace with Firebase/Supabase)
+  let memes = [];
+  let users = ["Vikrant", "Friend1", "Friend2"];
+  let points = { "Vikrant": 0, "Friend1": 0, "Friend2": 0 };
+
+  const dares = [
+    "Take a funny selfie 🤳",
+    "Make a meme in 2 minutes ⏱️",
+    "Roast someone nicely 😏",
+    "Speak in rhyme for 5 min 🎤",
+    "Send a random emoji-only message 😜"
+  ];
+
+  function uploadMeme() {
+    const fileInput = document.getElementById('memeUpload');
+    const file = fileInput.files[0];
+    if (!file) return alert("Select a meme first!");
+    
+    // Mock upload - in real, upload to Firebase/Supabase
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const url = e.target.result;
+      const uploader = users[Math.floor(Math.random() * users.length)];
+      memes.push({ url, uploader, votes: 0 });
+      renderGallery();
+    }
+    reader.readAsDataURL(file);
+    fileInput.value = "";
+  }
+
+  function renderGallery() {
+    const gallery = document.getElementById('gallery');
+    gallery.innerHTML = "";
+    memes.forEach((meme, index) => {
+      const card = document.createElement('div');
+      card.className = "meme-card";
+      card.innerHTML = `
+        <img src="${meme.url}" alt="Meme">
+        <p>By: ${meme.uploader}</p>
+        <p>Votes: ${meme.votes}</p>
+        <button onclick="voteMeme(${index})">Vote 👍</button>
+      `;
+      gallery.appendChild(card);
+    });
+    renderLeaderboard();
+  }
+
+  function voteMeme(index) {
+    memes[index].votes++;
+    points[memes[index].uploader] += 1; // Add points to uploader
+    renderGallery();
+  }
+
+  function spinDare() {
+    const dare = dares[Math.floor(Math.random() * dares.length)];
+    document.getElementById('dareText').innerText = dare;
+
+    // Randomly give points to a user for completing dare
+    const randomUser = users[Math.floor(Math.random() * users.length)];
+    points[randomUser] += 2;
+    renderLeaderboard();
+  }
+
+  function renderLeaderboard() {
+    const list = document.getElementById('leaderboardList');
+    list.innerHTML = "";
+    const sortedUsers = Object.keys(points).sort((a,b) => points[b]-points[a]);
+    sortedUsers.forEach(user => {
+      const li = document.createElement('li');
+      li.innerText = `${user}: ${points[user]} pts`;
+      list.appendChild(li);
+    });
+  }
+
+  // Initial render
+  renderGallery();
+</script>
+
+</body>
+</html>
