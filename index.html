@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meme Battle Hub 🎯</title>
+<style>
+  /* ---- Body & Layout ---- */
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #36d1dc, #5b86e5);
+    margin: 0; padding: 0;
+    color: #333;
+  }
+  header {
+    background: #1f1c2c;
+    color: #fff;
+    text-align: center;
+    padding: 1rem 0;
+    font-size: 2rem;
+    letter-spacing: 1px;
+    text-shadow: 1px 1px #000;
+  }
+  .container { max-width: 900px; margin: 20px auto; padding: 15px; }
+  h2 { color: #fff; margin-top: 30px; }
+
+  /* ---- Buttons ---- */
+  button {
+    padding: 10px 20px;
+    margin: 5px 0;
+    cursor: pointer;
+    background: #ff7e5f;
+    border: none;
+    color: white;
+    border-radius: 10px;
+    font-weight: bold;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    animation: bounce 0.5s;
+  }
+
+  /* ---- Bouncing animation ---- */
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* ---- Meme Gallery ---- */
+  .gallery { display: flex; flex-wrap: wrap; gap: 15px; margin-top: 20px; }
+  .meme-card {
+    background: #fff;
+    padding: 10px;
+    border-radius: 15px;
+    width: 200px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .meme-card:hover { transform: scale(1.05); }
+  .meme-card img { max-width: 100%; border-radius: 10px; }
+
+  /* ---- Dare Wheel ---- */
+  .dare-wheel { margin-top: 40px; text-align: center; }
+  #dareText { margin-top: 15px; font-size: 18px; font-weight: bold; color: #ffeb3b; text-shadow: 1px 1px #000; }
+
+  /* ---- Leaderboard ---- */
+  .leaderboard {
+    margin-top: 40px;
+    background: rgba(255,255,255,0.9);
+    padding: 15px;
+    border-radius: 15px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+  }
+  .leaderboard h2 { margin-top: 0; }
+  li { margin: 5px 0; }
+</style>
+</head>
+<body>
+
+<header>Meme Battle Hub 🎯</header>
+
+<div class="container">
+
+  <!-- Meme Upload -->
+  <h2>Upload Your Meme 🖼️</h2>
+  <input type="file" id="memeUpload" />
+  <button onclick="uploadMeme()">Upload Meme</button>
+
+  <!-- Meme Gallery -->
+  <h2>Meme Gallery 😎</h2>
+  <div class="gallery" id="gallery"></div>
+
+  <!-- Dare Wheel -->
+  <div class="dare-wheel">
+    <h2>Dare Wheel 🎡</h2>
+    <button onclick="spinDare()">Spin the Wheel</button>
+    <p id="dareText"></p>
+  </div>
+
+  <!-- Leaderboard -->
+  <div class="leaderboard">
+    <h2>Leaderboard 🏆</h2>
+    <ul id="leaderboardList"></ul>
+  </div>
+
+</div>
+
+<!-- ---- Firebase SDK ---- -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+
+<script>
+  // ---- Firebase Config ----
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = firebase.initializeApp(firebaseConfig);
+  const storage = firebase.storage();
+  const db = firebase.firestore();
+
+  // ---- App Logic ----
+  let memes = [];
+  let users = ["Vikrant", "Friend1", "Friend2"];
+  let points = { "Vikrant": 0, "Friend1": 0, "Friend2": 0 };
+
+  const dares = [
+    "Take a funny selfie 🤳",
+    "Make a meme in 2 minutes ⏱️",
+    "Roast someone nicely 😏",
+    "Speak in rhyme for 5 min 🎤",
+    "Send a random emoji-only message 😜"
+  ];
+
+  function uploadMeme() {
+    const fileInput = document.getElementById('memeUpload');
+    const file = fileInput.files[0];
+    if(!file) return alert("Select a meme first!");
+
+    // Firebase upload
+    const storageRef = storage.ref('memes/' + file.name);
+    const uploader = users[Math.floor(Math.random()*users.length)];
+    storageRef.put(file).then(() => {
+      storageRef.getDownloadURL().then(url => {
+        db.collection('memes').add({ url, uploader, votes: 0, timestamp: Date.now() });
+      });
+    });
+    fileInput.value = "";
+  }
+
+  // Real-time listener for gallery
+  db.collection('memes').orderBy('timestamp', 'desc')
+    .onSnapshot(snapshot => {
+      memes = [];
+      snapshot.forEach(doc => memes.push({...doc.data(), id: doc.id}));
+      renderGallery();
+    });
+
+  function renderGallery() {
+    const gallery = document.getElementById('gallery');
+    gallery.innerHTML = "";
+    memes.forEach((meme, index) => {
+      const card = document.createElement('div');
+      card.className = "meme-card";
+      card.innerHTML = `
+        <img src="${meme.url}" alt="Meme">
+        <p>By: ${meme.uploader}</p>
+        <p>Votes: ${meme.votes}</p>
+        <button onclick="voteMeme('${meme.id}')">Vote 👍</button>
+      `;
+      gallery.appendChild(card);
+    });
+    renderLeaderboard();
+  }
+
+  function voteMeme(id) {
+    const memeRef = db.collection('memes').doc(id);
+    memeRef.update({ votes: firebase.firestore.FieldValue.increment(1) });
+    memes.forEach(m => {
+      if(m.id===id) points[m.uploader] = (points[m.uploader] || 0) + 1;
+    });
+    renderLeaderboard();
+  }
+
+  function spinDare() {
+    const dare = dares[Math.floor(Math.random()*dares.length)];
+    document.getElementById('dareText').innerText = dare;
+    const randomUser = users[Math.floor(Math.random()*users.length)];
+    points[randomUser] = (points[randomUser] || 0) + 2;
+    renderLeaderboard();
+  }
+
+  function renderLeaderboard() {
+    const list = document.getElementById('leaderboardList');
+    list.innerHTML = "";
+    const sortedUsers = Object.keys(points).sort((a,b)=>points[b]-points[a]);
+    sortedUsers.forEach(user => {
+      const li = document.createElement('li');
+      li.innerText = `${user}: ${points[user]} pts`;
+      list.appendChild(li);
+    });
+  }
+
+</script>
+
+</body>
+</html>
